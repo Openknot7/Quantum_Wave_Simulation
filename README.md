@@ -43,7 +43,7 @@ $$
 - **|ψ(x,t)|²** — probability density (visualized on screen)  
 - **V(x)** — potential barrier  
 - **m** — particle mass  
-- **ℏ** — reduced Planck constant
+- **ℏ** — (reduced Planck constant) $$\approx 6.582119569 \times 10^{-16} \text{ eV}\cdot\text{s}$$, $$\ 1.054571817 \times 10^{-34} \text{ J}\cdot\text{s}$$
 
 This equation governs the evolution of a quantum particle in space and time. Let's break it down intuitively.
 
