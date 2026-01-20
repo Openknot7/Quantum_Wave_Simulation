@@ -1,0 +1,10 @@
+name = "quantum-wave-simulation"
+compatibility_date = "2026-01-20"
+
+[site]
+bucket = "./"
+
+[[rules]]
+type = "Text"
+globs = ["**/*.html", "**/*.css", "**/*.js", "**/*.jsx"]
+fallthrough = true
