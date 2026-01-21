@@ -27,8 +27,8 @@ A real-time, browser-based visualizer for the 1D Time-Dependent Schrödinger Equ
 /quantum-simulation
 │
 ├── index.html    # The main entry point and UI structure
-├── style.css     # Styling for the dark mode UI
-├── script.js     # The physics engine and animation loop
+├── index.css     # Styling for the dark mode UI
+├── app.js        # The physics engine and animation loop
 └── README.md     # Project documentation
 ```
 
