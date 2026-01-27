@@ -193,100 +193,51 @@ const QuantumWaveSimulation = () => {
 
     /* ========== RENDERING ========== */
 
-    function draw() {
-        const canvas = canvasRef.current;
-        if (!canvas || !stateRef.current.psi_r) return;
-        const ctx = canvas.getContext("2d");
-        
-        // Handle High DPI displays (Retina)
-        const dpr = window.devicePixelRatio || 1;
-        const rect = canvas.getBoundingClientRect();
-        
-        // Ensure internal canvas resolution matches screen resolution
-        canvas.width = rect.width * dpr;
-        canvas.height = rect.height * dpr;
-        
-        // Scale back down with CSS is handled by style prop, 
-        // here we scale the context
-        ctx.scale(dpr, dpr);
-
-        const width = rect.width;
-        const height = rect.height;
-
-        const { psi_r, psi_i, V, time } = stateRef.current;
-        const { nx, barrierHeight } = paramsRef.current;
-
-        // Background
-        ctx.fillStyle = "#0f172a";
-        ctx.fillRect(0, 0, width, height);
-
-        // Calculate Probability Density
-        let maxP = 0;
-        const prob = new Array(nx);
-        for (let i = 0; i < nx; i++) {
-            prob[i] = psi_r[i] ** 2 + psi_i[i] ** 2;
-            if (prob[i] > maxP) maxP = prob[i];
-        }
-        // Normalize visualization slightly to avoid flickering
-        maxP = Math.max(maxP, 0.5); 
-
-        // Draw Barrier
-        ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
-        ctx.beginPath();
-        for(let i=0; i<nx; i++) {
-            if(V[i] > 0) {
-                const x = (i / nx) * width;
-                const h = (V[i] / (barrierHeight * 1.5)) * height;
-                ctx.fillRect(x, height - h, width/nx + 1, h);
-            }
-        }
-
-        // Draw Wavefunction
-        ctx.strokeStyle = "#38bdf8";
-        ctx.lineWidth = 3;
-        ctx.lineJoin = "round";
-        ctx.beginPath();
-
-        for (let i = 0; i < nx; i++) {
-            const x = (i / nx) * width;
-            // Scale y so it doesn't hit top exactly
-            const y = height - 10 - (prob[i] / maxP) * (height * 0.8);
-            if (i === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-        }
-        ctx.stroke();
-
-        // Info Text
-        ctx.fillStyle = "#94a3b8";
-        ctx.font = "12px monospace";
-        ctx.fillText(`T: ${time.toFixed(2)}`, 10, 20);
-    }
-
-    /* ========== ANIMATION LOOP ========== */
-
-    const animate = () => {
-        for (let i = 0; i < paramsRef.current.speed; i++) evolve();
-        draw();
-        animationRef.current = requestAnimationFrame(animate);
-    }
-
-    useEffect(() => {
-        if (isPlaying) {
-            animationRef.current = requestAnimationFrame(animate);
-        } else {
-            cancelAnimationFrame(animationRef.current);
-            draw(); // Ensure one draw happens so we don't lose the canvas content
-        }
-        return () => cancelAnimationFrame(animationRef.current);
-    }, [isPlaying]);
-
-    /* ========== HANDLERS ========== */
+   // Add this inside your QuantumWaveSimulation component
+function draw() {
+    const canvas = canvasRef.current;
+    if (!canvas || !stateRef.current.psi_r) return;
     
-    const togglePlay = () => setIsPlaying(!isPlaying);
-    const reset = () => {
-        setIsPlaying(false);
-        initialize();
+    const ctx = canvas.getContext("2d");
+    const dpr = window.devicePixelRatio || 1;
+    
+    // Pro-Tip: Ensure logical vs physical pixel alignment
+    const width = canvas.width / dpr;
+    const height = canvas.height / dpr;
+    
+    // ... (rest of your drawing code) ...
+    // Note: When using dpr, you must scale the context once at the start of draw:
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); 
+    
+    // Now use 'width' and 'height' instead of canvas.width
+    ctx.fillStyle = "#0f172a";
+    ctx.fillRect(0, 0, width, height);
+    
+    // ... drawing logic ...
+}
+
+// Updated Resize Observer for iOS stability
+useEffect(() => {
+    const resize = () => {
+        if(containerRef.current && canvasRef.current) {
+            const dpr = window.devicePixelRatio || 1;
+            const rect = containerRef.current.getBoundingClientRect();
+            
+            // Set physical pixels
+            canvasRef.current.width = rect.width * dpr;
+            canvasRef.current.height = 300 * dpr;
+            
+            // Set CSS display pixels
+            canvasRef.current.style.width = `${rect.width}px`;
+            canvasRef.current.style.height = `300px`;
+            
+            draw();
+        }
     };
+    window.addEventListener('resize', resize);
+    resize();
+    return () => window.removeEventListener('resize', resize);
+}, []);
 
     return (
         <div 
