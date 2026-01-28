@@ -224,7 +224,9 @@ const QuantumWaveSimulation = () => {
         const canvas = canvasRef.current;
         if (!canvas || !stateRef.current.psi_r) return;
         
-        const ctx = canvas.getContext("2d");
+         const ctx = canvas.getContext("2d");
+         if (!ctx) return;
+
         const dpr = window.devicePixelRatio || 1;
         
         // Match canvas internal resolution to screen pixels
@@ -232,7 +234,7 @@ const QuantumWaveSimulation = () => {
         canvas.height = dimensions.height * dpr;
         
         // Normalize coordinate system
-        ctx.scale(dpr, dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         
         const { width, height } = dimensions;
         const { psi_r, psi_i, V, time } = stateRef.current;
@@ -288,7 +290,10 @@ const QuantumWaveSimulation = () => {
         if (isPlaying) {
             animationRef.current = requestAnimationFrame(animate);
         } else {
-            cancelAnimationFrame(animationRef.current);
+            if (animationRef.current) {
+              cancelAnimationFrame(animationRef.current);
+             }
+
             draw();
         }
         return () => cancelAnimationFrame(animationRef.current);
