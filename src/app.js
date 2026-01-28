@@ -180,7 +180,8 @@ const QuantumWaveSimulation = () => {
 
             psi_r[i] = g * Math.cos(k0 * x);
             psi_i[i] = g * Math.sin(k0 * x);
-            norm += psi_r[i] ** 2 + psi_i[i] ** 2;
+            norm += Math.pow(psi_r[i], 2) + Math.pow(psi_i[i], 2);
+
             V[i] = (x > barrierPos - barrierWidth / 2 && x < barrierPos + barrierWidth / 2) ? barrierHeight : 0;
             const w = 40, eta = 0.02;
             if (i < w) { V[i] += -eta * Math.pow(w - i, 2);}
