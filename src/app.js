@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 
 /* ================= FFT UTILITIES ================= */
 
-function fft(re, im) {
+function fft(re, im) {   
     const n = re.length;
     if (n <= 1) return;
     const er = new Array(n / 2), ei = new Array(n / 2);
