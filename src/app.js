@@ -174,15 +174,18 @@ const QuantumWaveSimulation = () => {
 
         for (let i = 0; i < nx; i++) {
             const x = xStart + i * dx;
-            const g = Math.exp(-(x - x0) ** 2 / (2 * sigma ** 2));
+            const g = Math.exp( -Math.pow(x - x0, 2) / (2 * Math.pow(sigma, 2)));
+
+            norm += Math.pow(psi_r[i], 2) + Math.pow(psi_i[i], 2);
+
             psi_r[i] = g * Math.cos(k0 * x);
             psi_i[i] = g * Math.sin(k0 * x);
             norm += psi_r[i] ** 2 + psi_i[i] ** 2;
             V[i] = (x > barrierPos - barrierWidth / 2 && x < barrierPos + barrierWidth / 2) ? barrierHeight : 0;
             const w = 40, eta = 0.02;
-            if (i < w) V[i] += -eta * (w - i) ** 2;
-            if (i > nx - w) V[i] += -eta * (i - (nx - w)) ** 2;
-        }
+            if (i < w) { V[i] += -eta * Math.pow(w - i, 2);}
+
+            if (i > nx - w) { V[i] += -eta * Math.pow(i - (nx - w), 2);}
 
         norm = Math.sqrt(norm * dx);
         for (let i = 0; i < nx; i++) { psi_r[i] /= norm; psi_i[i] /= norm; }
@@ -246,7 +249,8 @@ const QuantumWaveSimulation = () => {
         let maxP = 0;
         const prob = new Array(nx);
         for (let i = 0; i < nx; i++) {
-            prob[i] = psi_r[i] ** 2 + psi_i[i] ** 2;
+           prob[i] = Math.pow(psi_r[i], 2) + Math.pow(psi_i[i], 2);
+
             if (prob[i] > maxP) maxP = prob[i];
         }
         maxP = Math.max(maxP, 0.5);
