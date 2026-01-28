@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+const { useState, useEffect, useRef } = React;
 
 /* ================= FFT UTILITIES ================= */
 function fft(re, im) {   
@@ -219,4 +219,7 @@ const ControlRow = ({ label, val, min, max, step, onChange }) => (
     </div>
 );
 
-export default QuantumWaveSimulation;
+/* ================= RENDER TO DOM ================= */
+const rootElement = document.getElementById('root');
+const root = ReactDOM.createRoot(rootElement);
+root.render(<QuantumWaveSimulation />);
