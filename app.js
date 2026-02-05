@@ -77,7 +77,16 @@ const QuantumWaveSimulation = () => {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    useEffect(() => { initialize(); }, [params.k0, params.sigma, params.x0, params.barrierHeight, params.barrierWidth, params.barrierPos]);
+    // Re-initialize when parameters change
+    useEffect(() => { initialize(); }, [
+        params.k0, 
+        params.sigma, 
+        params.x0, 
+        params.barrierHeight, 
+        params.barrierWidth, 
+        params.barrierPos 
+    ]);
+    
     useEffect(() => { draw(); }, [dimensions]);
 
     function initialize() {
@@ -93,7 +102,10 @@ const QuantumWaveSimulation = () => {
             psi_i[i] = g * Math.sin(k0 * x);
             norm_val += Math.pow(psi_r[i], 2) + Math.pow(psi_i[i], 2);
             
+            // Barrier Logic
             V[i] = (x > barrierPos - barrierWidth / 2 && x < barrierPos + barrierWidth / 2) ? barrierHeight : 0;
+            
+            // Absorbing boundary conditions (edges)
             const w = 40, eta = 0.02;
             if (i < w) V[i] += -eta * Math.pow(w - i, 2);
             if (i > nx - w) V[i] += -eta * Math.pow(i - (nx - w), 2);
@@ -139,7 +151,7 @@ const QuantumWaveSimulation = () => {
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         const { width, height } = dimensions;
         const { psi_r, psi_i, V, time } = stateRef.current;
-        const { nx, barrierHeight } = paramsRef.current;
+        const { nx } = paramsRef.current;
 
         ctx.fillStyle = "#020617";
         ctx.fillRect(0, 0, width, height);
@@ -152,15 +164,21 @@ const QuantumWaveSimulation = () => {
         }
         maxP = Math.max(maxP, 0.5);
 
+        /* --- DRAW BARRIER --- */
         ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+        // We use a fixed Max Height (100) for scaling so the visual barrier grows/shrinks
+        const FIXED_MAX_HEIGHT_SCALE = 120; 
+        
         for (let i = 0; i < nx; i++) {
             if (V[i] > 0) {
                 const x = (i / nx) * width;
-                const h = (V[i] / (barrierHeight * 1.5 || 100)) * height;
+                // Fix: Divide by fixed scale instead of dynamic barrierHeight
+                const h = (Math.abs(V[i]) / FIXED_MAX_HEIGHT_SCALE) * height;
                 ctx.fillRect(x, height - h, Math.max(1, width / nx + 1), h);
             }
         }
 
+        /* --- DRAW WAVE --- */
         ctx.strokeStyle = "#22d3ee";
         ctx.lineWidth = 2.5;
         ctx.beginPath();
@@ -201,9 +219,16 @@ const QuantumWaveSimulation = () => {
                         Reset
                     </button>
                 </div>
+                
+                {/* --- CONTROLS --- */}
                 <ControlRow label="Energy (k0)" val={params.k0} min={1} max={15} step={0.5} onChange={v => setParams(p => ({...p, k0: parseFloat(v)}))} />
+                
                 <ControlRow label="Barrier Height" val={params.barrierHeight} min={0} max={100} step={5} onChange={v => setParams(p => ({...p, barrierHeight: parseFloat(v)}))} />
+                
                 <ControlRow label="Barrier Width" val={params.barrierWidth} min={0.5} max={5} step={0.1} onChange={v => setParams(p => ({...p, barrierWidth: parseFloat(v)}))} />
+                
+                {/* NEW BARRIER POSITION CONTROL */}
+                <ControlRow label="Barrier Position" val={params.barrierPos} min={-5} max={10} step={0.5} onChange={v => setParams(p => ({...p, barrierPos: parseFloat(v)}))} />
             </div>
         </div>
     );
