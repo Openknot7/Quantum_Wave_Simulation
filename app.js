@@ -171,7 +171,7 @@ const QuantumWaveSimulation = () => {
     ctx.fillRect(0, 0, width, height);
 
     // --- DRAW BARRIER (FIXED FOR REAL-TIME) ---
-    ctx.fillStyle = "rgba(255, 255, 255, 0.2)";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.35)";
     const VISUAL_SCALE_MAX = 100; 
     const xStart = -10;
 
@@ -181,10 +181,35 @@ const QuantumWaveSimulation = () => {
     const bLeft = ((barrierPos - barrierWidth / 2) - xStart) / totalPhysWidth * width;
     const bRight = ((barrierPos + barrierWidth / 2) - xStart) / totalPhysWidth * width;
     const bWidthPixels = bRight - bLeft;
-    const bHeightPixels = (barrierHeight / VISUAL_SCALE_MAX) * height;
+    const clampedHeight = Math.min(Math.max(barrierHeight, 0), VISUAL_SCALE_MAX);
+    const bHeightPixels = (clampedHeight / VISUAL_SCALE_MAX) * (height * 0.85);
+    const bCenter = bLeft + bWidthPixels / 2;
 
     // Draw the barrier rectangle directly based on CURRENT params
-    ctx.fillRect(bLeft, height - bHeightPixels, bWidthPixels, bHeightPixels);
+    if (bWidthPixels > 0 && bHeightPixels > 0) {
+        ctx.fillRect(bLeft, height - bHeightPixels, bWidthPixels, bHeightPixels);
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.65)";
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(bLeft, height - bHeightPixels, bWidthPixels, bHeightPixels);
+    }
+
+    // Barrier position marker + label
+    ctx.save();
+    ctx.setLineDash([6, 6]);
+    ctx.strokeStyle = "rgba(148, 163, 184, 0.6)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(bCenter, 8);
+    ctx.lineTo(bCenter, height - 8);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = "#e2e8f0";
+    ctx.font = "12px monospace";
+    const label = `Barrier @ x=${barrierPos.toFixed(2)}`;
+    const labelWidth = ctx.measureText(label).width;
+    const labelX = Math.min(Math.max(bCenter - labelWidth / 2, 8), width - labelWidth - 8);
+    ctx.fillText(label, labelX, 20);
+    ctx.restore();
 
     // --- DRAW WAVE FUNCTION ---
     let maxP = 0;
