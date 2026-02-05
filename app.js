@@ -38,16 +38,9 @@ function ifft(re, im) {
 const INITIAL_PARAMS = {
     nx: 512, dx: 0.05, dt: 0.002, hbar: 1, m: 1,
     k0: 5, x0: -6, sigma: 0.7,
-    barrierHeight: 40, barrierWidth: 1.5, barrierPos: 0,
+    barrierHeight: 40, barrierWidth: 1.5, barrierPos: 0, 
     speed: 2
 };
-
-const IOS_STYLES = `
-    input[type="range"] { -webkit-appearance: none; width: 100%; background: transparent; margin: 10px 0; }
-    input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; height: 24px; width: 24px; border-radius: 50%; background: #22d3ee; cursor: pointer; margin-top: -10px; }
-    input[type="range"]::-webkit-slider-runnable-track { width: 100%; height: 5px; background: #334155; border-radius: 2px; }
-    canvas { touch-action: none; -webkit-user-select: none; }
-`;
 
 /* ================= MAIN COMPONENT ================= */
 const QuantumWaveSimulation = () => {
@@ -62,8 +55,10 @@ const QuantumWaveSimulation = () => {
     const paramsRef = useRef(params);
     const stateRef = useRef({ psi_r: null, psi_i: null, V: null, time: 0 });
 
+    // Keep ref in sync with state for animation loop
     useEffect(() => { paramsRef.current = params; }, [params]);
 
+    // Handle Resize
     useEffect(() => {
         const handleResize = () => {
             if (wrapperRef.current) {
@@ -77,7 +72,7 @@ const QuantumWaveSimulation = () => {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    // Re-initialize when parameters change
+    // Re-initialize physics when ANY parameter changes
     useEffect(() => { initialize(); }, [
         params.k0, 
         params.sigma, 
@@ -87,32 +82,41 @@ const QuantumWaveSimulation = () => {
         params.barrierPos 
     ]);
     
+    // Redraw when dimensions change
     useEffect(() => { draw(); }, [dimensions]);
 
     function initialize() {
         const { nx, dx, k0, x0, sigma, barrierHeight, barrierWidth, barrierPos } = paramsRef.current;
         const psi_r = new Array(nx), psi_i = new Array(nx), V = new Array(nx);
+        
+        // Physics Domain: Starts at x = -10
         const xStart = -10;
         let norm_val = 0;
 
         for (let i = 0; i < nx; i++) {
             const x = xStart + i * dx;
+            
+            // 1. Setup Wave Packet (Gaussian)
             const g = Math.exp(-Math.pow(x - x0, 2) / (2 * Math.pow(sigma, 2)));
             psi_r[i] = g * Math.cos(k0 * x);
             psi_i[i] = g * Math.sin(k0 * x);
             norm_val += Math.pow(psi_r[i], 2) + Math.pow(psi_i[i], 2);
             
-            // Barrier Logic
-            V[i] = (x > barrierPos - barrierWidth / 2 && x < barrierPos + barrierWidth / 2) ? barrierHeight : 0;
+            // 2. Setup Barrier Potential
+            // We verify if current x is within the user-defined barrier position window
+            const inBarrier = x > (barrierPos - barrierWidth / 2) && x < (barrierPos + barrierWidth / 2);
+            V[i] = inBarrier ? barrierHeight : 0;
             
-            // Absorbing boundary conditions (edges)
+            // 3. Absorbing Edges (prevents reflection from screen edges)
             const w = 40, eta = 0.02;
             if (i < w) V[i] += -eta * Math.pow(w - i, 2);
             if (i > nx - w) V[i] += -eta * Math.pow(i - (nx - w), 2);
         }
 
+        // Normalize Wave Function
         const norm = Math.sqrt(norm_val * dx);
         for (let i = 0; i < nx; i++) { psi_r[i] /= norm; psi_i[i] /= norm; }
+        
         stateRef.current = { psi_r, psi_i, V, time: 0 };
         draw();
     }
@@ -120,11 +124,15 @@ const QuantumWaveSimulation = () => {
     function evolve() {
         const { nx, dx, dt, hbar, m } = paramsRef.current;
         const { psi_r, psi_i, V } = stateRef.current;
+        
+        // Split-Operator Method Step 1: Potential (half step)
         for (let i = 0; i < nx; i++) {
             const ph = -V[i] * dt / (2 * hbar);
             const c = Math.cos(ph), s = Math.sin(ph), r = psi_r[i], im = psi_i[i];
             psi_r[i] = c * r - s * im; psi_i[i] = s * r + c * im;
         }
+        
+        // Step 2: Kinetic (Momentum space)
         fft(psi_r, psi_i);
         for (let i = 0; i < nx; i++) {
             const k = (i < nx / 2) ? (2 * Math.PI * i) / (nx * dx) : (2 * Math.PI * (i - nx)) / (nx * dx);
@@ -133,11 +141,14 @@ const QuantumWaveSimulation = () => {
             psi_r[i] = c * r - s * im; psi_i[i] = s * r + c * im;
         }
         ifft(psi_r, psi_i);
+        
+        // Step 3: Potential (half step)
         for (let i = 0; i < nx; i++) {
             const ph = -V[i] * dt / (2 * hbar);
             const c = Math.cos(ph), s = Math.sin(ph), r = psi_r[i], im = psi_i[i];
             psi_r[i] = c * r - s * im; psi_i[i] = s * r + c * im;
         }
+        
         stateRef.current.time += dt;
     }
 
@@ -146,16 +157,20 @@ const QuantumWaveSimulation = () => {
         if (!canvas || !stateRef.current.psi_r) return;
         const ctx = canvas.getContext("2d");
         const dpr = window.devicePixelRatio || 1;
+        
         canvas.width = dimensions.width * dpr;
         canvas.height = dimensions.height * dpr;
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        
         const { width, height } = dimensions;
         const { psi_r, psi_i, V, time } = stateRef.current;
         const { nx } = paramsRef.current;
 
-        ctx.fillStyle = "#020617";
+        // Clear Background
+        ctx.fillStyle = "#020617"; // slate-950
         ctx.fillRect(0, 0, width, height);
 
+        // Calculate Probability Density
         let maxP = 0;
         const prob = new Array(nx);
         for (let i = 0; i < nx; i++) {
@@ -164,22 +179,26 @@ const QuantumWaveSimulation = () => {
         }
         maxP = Math.max(maxP, 0.5);
 
-        /* --- DRAW BARRIER --- */
+        // --- DRAW BARRIER ---
         ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
-        // We use a fixed Max Height (100) for scaling so the visual barrier grows/shrinks
-        const FIXED_MAX_HEIGHT_SCALE = 120; 
         
+        // FIX: We scale the barrier drawing by a FIXED max constant (120)
+        // instead of scaling it by the current barrierHeight. 
+        // This ensures that when you increase height, the bar grows.
+        const VISUAL_SCALE_MAX = 120; 
+
         for (let i = 0; i < nx; i++) {
-            if (V[i] > 0) {
+            if (V[i] > 0.1) { // Only draw if potential is significant
                 const x = (i / nx) * width;
-                // Fix: Divide by fixed scale instead of dynamic barrierHeight
-                const h = (Math.abs(V[i]) / FIXED_MAX_HEIGHT_SCALE) * height;
-                ctx.fillRect(x, height - h, Math.max(1, width / nx + 1), h);
+                const h = (V[i] / VISUAL_SCALE_MAX) * height; 
+                
+                // Ensure the rect is at least 1px wide to avoid aliasing gaps
+                ctx.fillRect(x, height - h, Math.max(1, width/nx + 0.5), h);
             }
         }
 
-        /* --- DRAW WAVE --- */
-        ctx.strokeStyle = "#22d3ee";
+        // --- DRAW WAVE FUNCTION ---
+        ctx.strokeStyle = "#22d3ee"; // cyan-400
         ctx.lineWidth = 2.5;
         ctx.beginPath();
         for (let i = 0; i < nx; i++) {
@@ -188,7 +207,10 @@ const QuantumWaveSimulation = () => {
             if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         }
         ctx.stroke();
-        ctx.fillStyle = "#94a3b8";
+
+        // Time Label
+        ctx.fillStyle = "#94a3b8"; // slate-400
+        ctx.font = "12px monospace";
         ctx.fillText(`Time: ${time.toFixed(2)}`, 15, 25);
     }
 
@@ -203,7 +225,6 @@ const QuantumWaveSimulation = () => {
         return () => cancelAnimationFrame(animationRef.current);
     }, [isPlaying]);
 
-   
     return (
         <div className="min-h-screen bg-slate-900 text-slate-200 font-sans p-4 md:p-8">
             <div className="max-w-4xl mx-auto space-y-8">
@@ -222,18 +243,13 @@ const QuantumWaveSimulation = () => {
                 <div 
                     ref={wrapperRef} 
                     className="relative w-full rounded-xl border border-slate-700 bg-slate-950 shadow-2xl overflow-hidden"
-                    style={{ boxShadow: '0 0 40px -10px rgba(34, 211, 238, 0.15)' }} // Subtle glow
+                    style={{ boxShadow: '0 0 40px -10px rgba(34, 211, 238, 0.15)' }} 
                 >
                     <canvas 
                         ref={canvasRef} 
                         className="block w-full h-full"
                         style={{ width: dimensions.width, height: dimensions.height }}
                     />
-                    
-                    {/* Overlay Stat */}
-                    <div className="absolute top-4 right-4 text-xs font-mono text-cyan-400 bg-slate-900/50 px-2 py-1 rounded border border-cyan-500/50 backdrop-blur-sm">
-                        T = {stateRef.current.time.toFixed(2)}
-                    </div>
                 </div>
 
                 {/* Controls Container */}
@@ -249,7 +265,7 @@ const QuantumWaveSimulation = () => {
                                 : 'bg-gradient-to-r text-slate-900 hover:opacity-90'
                             }`}
                         >
-                            {isPlaying ? "Pause Simulation" : "Start Simulation"}
+                            {isPlaying ? "Pause" : "Start"}
                         </button>
                         
                         <button 
@@ -260,21 +276,34 @@ const QuantumWaveSimulation = () => {
                         </button>
                     </div>
 
-                    {/* Sliders */}
+                    {/* Sliders Column 1 */}
                     <div className="space-y-6">
-                        <ControlRow label="Energy (k0)" val={params.k0} min={1} max={15} step={0.5} 
-                            onChange={v => setParams(p => ({...p, k0: parseFloat(v)}))} />
+                        <ControlRow 
+                            label="Energy (k0)" 
+                            val={params.k0} min={1} max={15} step={0.5} 
+                            onChange={v => setParams(p => ({...p, k0: parseFloat(v)}))} 
+                        />
                         
-                        <ControlRow label="Barrier Position" val={params.barrierPos} min={-5} max={10} step={0.5} 
-                            onChange={v => setParams(p => ({...p, barrierPos: parseFloat(v)}))} />
+                        <ControlRow 
+                            label="Barrier Position" 
+                            val={params.barrierPos} min={-5} max={10} step={0.5} 
+                            onChange={v => setParams(p => ({...p, barrierPos: parseFloat(v)}))} 
+                        />
                     </div>
 
+                    {/* Sliders Column 2 */}
                     <div className="space-y-6">
-                        <ControlRow label="Barrier Height" val={params.barrierHeight} min={0} max={100} step={5} 
-                            onChange={v => setParams(p => ({...p, barrierHeight: parseFloat(v)}))} />
+                        <ControlRow 
+                            label="Barrier Height" 
+                            val={params.barrierHeight} min={0} max={100} step={5} 
+                            onChange={v => setParams(p => ({...p, barrierHeight: parseFloat(v)}))} 
+                        />
 
-                        <ControlRow label="Barrier Width" val={params.barrierWidth} min={0.5} max={5} step={0.1} 
-                            onChange={v => setParams(p => ({...p, barrierWidth: parseFloat(v)}))} />
+                        <ControlRow 
+                            label="Barrier Width" 
+                            val={params.barrierWidth} min={0.5} max={5} step={0.1} 
+                            onChange={v => setParams(p => ({...p, barrierWidth: parseFloat(v)}))} 
+                        />
                     </div>
                 </div>
             </div>
@@ -282,7 +311,7 @@ const QuantumWaveSimulation = () => {
     );
 };
 
-
+/* Helper Component for Sliders */
 const ControlRow = ({ label, val, min, max, step, onChange }) => (
     <div className="group">
         <div className="flex justify-between items-center mb-2 text-sm font-medium">
@@ -293,7 +322,7 @@ const ControlRow = ({ label, val, min, max, step, onChange }) => (
         </div>
         <input 
             type="range" 
-            className="range-slider" 
+            className="range-slider"
             min={min} 
             max={max} 
             step={step} 
@@ -302,7 +331,6 @@ const ControlRow = ({ label, val, min, max, step, onChange }) => (
         />
     </div>
 );
-   
 
 /* ================= RENDER TO DOM ================= */
 const rootElement = document.getElementById('root');
