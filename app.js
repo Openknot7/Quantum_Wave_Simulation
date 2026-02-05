@@ -293,7 +293,7 @@ const ControlRow = ({ label, val, min, max, step, onChange }) => (
         </div>
         <input 
             type="range" 
-            className="range-slider" // Uses your specific CSS class
+            className="range-slider" 
             min={min} 
             max={max} 
             step={step} 
