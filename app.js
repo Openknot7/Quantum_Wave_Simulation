@@ -153,60 +153,57 @@ const QuantumWaveSimulation = () => {
     }
 
     function draw() {
-        const canvas = canvasRef.current;
-        if (!canvas || !stateRef.current.psi_r) return;
-        const ctx = canvas.getContext("2d");
-        const dpr = window.devicePixelRatio || 1;
-        
-        canvas.width = dimensions.width * dpr;
-        canvas.height = dimensions.height * dpr;
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        
-        const { width, height } = dimensions;
-        const { psi_r, psi_i, V, time } = stateRef.current;
-        const { nx } = paramsRef.current;
+    const canvas = canvasRef.current;
+    if (!canvas || !stateRef.current.psi_r) return;
+    const ctx = canvas.getContext("2d");
+    const dpr = window.devicePixelRatio || 1;
+    
+    canvas.width = dimensions.width * dpr;
+    canvas.height = dimensions.height * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    
+    const { width, height } = dimensions;
+    const { psi_r, time } = stateRef.current;
+    const { nx, dx, barrierHeight, barrierWidth, barrierPos } = paramsRef.current; // Get latest params
 
-        // Clear Background
-        ctx.fillStyle = "#020617"; // slate-950
-        ctx.fillRect(0, 0, width, height);
+    // Clear Background
+    ctx.fillStyle = "#020617";
+    ctx.fillRect(0, 0, width, height);
 
-        // Calculate Probability Density
-        let maxP = 0;
-        const prob = new Array(nx);
-        for (let i = 0; i < nx; i++) {
-            prob[i] = Math.pow(psi_r[i], 2) + Math.pow(psi_i[i], 2);
-            if (prob[i] > maxP) maxP = prob[i];
-        }
-        maxP = Math.max(maxP, 0.5);
+    // --- DRAW BARRIER (FIXED FOR REAL-TIME) ---
+    ctx.fillStyle = "rgba(255, 255, 255, 0.2)";
+    const VISUAL_SCALE_MAX = 100; 
+    const xStart = -10;
 
-        // --- DRAW BARRIER ---
-        ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
-        
-        // FIX: We scale the barrier drawing by a FIXED max constant (120)
-        // instead of scaling it by the current barrierHeight. 
-        // This ensures that when you increase height, the bar grows.
-        const VISUAL_SCALE_MAX = 120; 
+    // Calculate barrier boundaries in pixel space
+    // x_pixel = (x_physics - xStart) / (total_physics_width) * width
+    const totalPhysWidth = nx * dx;
+    const bLeft = ((barrierPos - barrierWidth / 2) - xStart) / totalPhysWidth * width;
+    const bRight = ((barrierPos + barrierWidth / 2) - xStart) / totalPhysWidth * width;
+    const bWidthPixels = bRight - bLeft;
+    const bHeightPixels = (barrierHeight / VISUAL_SCALE_MAX) * height;
 
-        for (let i = 0; i < nx; i++) {
-            if (V[i] > 0.1) { // Only draw if potential is significant
-                const x = (i / nx) * width;
-                const h = (V[i] / VISUAL_SCALE_MAX) * height; 
-                
-                // Ensure the rect is at least 1px wide to avoid aliasing gaps
-                ctx.fillRect(x, height - h, Math.max(1, width/nx + 0.5), h);
-            }
-        }
+    // Draw the barrier rectangle directly based on CURRENT params
+    ctx.fillRect(bLeft, height - bHeightPixels, bWidthPixels, bHeightPixels);
 
-        // --- DRAW WAVE FUNCTION ---
-        ctx.strokeStyle = "#22d3ee"; // cyan-400
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        for (let i = 0; i < nx; i++) {
-            const x = (i / nx) * width;
-            const y = height - 10 - (prob[i] / maxP) * (height * 0.8);
-            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-        }
-        ctx.stroke();
+    // --- DRAW WAVE FUNCTION ---
+    let maxP = 0;
+    const prob = new Array(nx);
+    for (let i = 0; i < nx; i++) {
+        prob[i] = Math.pow(psi_r[i], 2) + Math.pow(stateRef.current.psi_i[i], 2);
+        if (prob[i] > maxP) maxP = prob[i];
+    }
+    maxP = Math.max(maxP, 0.5);
+
+    ctx.strokeStyle = "#22d3ee";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    for (let i = 0; i < nx; i++) {
+        const x = (i / nx) * width;
+        const y = height - 10 - (prob[i] / maxP) * (height * 0.8);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
 
         // Time Label
         ctx.fillStyle = "#94a3b8"; // slate-400
