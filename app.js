@@ -203,46 +203,106 @@ const QuantumWaveSimulation = () => {
         return () => cancelAnimationFrame(animationRef.current);
     }, [isPlaying]);
 
+   
     return (
-        <div style={{ fontFamily: 'system-ui, sans-serif', background: '#0f172a', minHeight: '100vh', color: 'white', padding: '10px' }}>
-            <style>{IOS_STYLES}</style>
-            <h2 style={{ textAlign: 'center' }}>Quantum Tunneling</h2>
-            <div ref={wrapperRef} style={{ border: '1px solid #334155', borderRadius: '8px', overflow: 'hidden', background: '#020617', marginBottom: '20px' }}>
-                <canvas ref={canvasRef} style={{ width: dimensions.width, height: dimensions.height, display: 'block' }} />
-            </div>
-            <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-                <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-                    <button onClick={() => setIsPlaying(!isPlaying)} style={{ flex: 1, padding: '14px', borderRadius: '8px', background: isPlaying ? '#ef4444' : '#22c55e', color: 'white', fontWeight: 'bold' }}>
-                        {isPlaying ? "Pause" : "Start"}
-                    </button>
-                    <button onClick={() => { setIsPlaying(false); initialize(); }} style={{ flex: 1, padding: '14px', borderRadius: '8px', background: '#475569', color: 'white', fontWeight: 'bold' }}>
-                        Reset
-                    </button>
+        <div className="min-h-screen bg-slate-900 text-slate-200 font-sans p-4 md:p-8">
+            <div className="max-w-4xl mx-auto space-y-8">
+                
+                {/* Header */}
+                <div className="text-center space-y-2">
+                    <h2 className="text-3xl font-bold bg-gradient-to-r bg-clip-text text-transparent">
+                        Quantum Tunneling
+                    </h2>
+                    <p className="text-slate-400 text-sm">
+                        Real-time Wave Packet Simulation
+                    </p>
                 </div>
-                
-                {/* --- CONTROLS --- */}
-                <ControlRow label="Energy (k0)" val={params.k0} min={1} max={15} step={0.5} onChange={v => setParams(p => ({...p, k0: parseFloat(v)}))} />
-                
-                <ControlRow label="Barrier Height" val={params.barrierHeight} min={0} max={100} step={5} onChange={v => setParams(p => ({...p, barrierHeight: parseFloat(v)}))} />
-                
-                <ControlRow label="Barrier Width" val={params.barrierWidth} min={0.5} max={5} step={0.1} onChange={v => setParams(p => ({...p, barrierWidth: parseFloat(v)}))} />
-                
-                {/* NEW BARRIER POSITION CONTROL */}
-                <ControlRow label="Barrier Position" val={params.barrierPos} min={-5} max={10} step={0.5} onChange={v => setParams(p => ({...p, barrierPos: parseFloat(v)}))} />
+
+                {/* Canvas Container */}
+                <div 
+                    ref={wrapperRef} 
+                    className="relative w-full rounded-xl border border-slate-700 bg-slate-950 shadow-2xl overflow-hidden"
+                    style={{ boxShadow: '0 0 40px -10px rgba(34, 211, 238, 0.15)' }} // Subtle glow
+                >
+                    <canvas 
+                        ref={canvasRef} 
+                        className="block w-full h-full"
+                        style={{ width: dimensions.width, height: dimensions.height }}
+                    />
+                    
+                    {/* Overlay Stat */}
+                    <div className="absolute top-4 right-4 text-xs font-mono text-cyan-400 bg-slate-900/50 px-2 py-1 rounded border border-cyan-500/50 backdrop-blur-sm">
+                        T = {stateRef.current.time.toFixed(2)}
+                    </div>
+                </div>
+
+                {/* Controls Container */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-slate-800/50 p-6 rounded-xl border border-slate-700/50 backdrop-blur-sm">
+                    
+                    {/* Button Group */}
+                    <div className="flex gap-4 items-center justify-center md:col-span-2 pb-4 border-b border-slate-700/50">
+                        <button 
+                            onClick={() => setIsPlaying(!isPlaying)} 
+                            className={`btn px-6 py-2.5 rounded-full font-semibold transition-all shadow-lg ${
+                                isPlaying 
+                                ? 'bg-slate-800 text-red-400 border border-red-500/50 hover:bg-slate-700' 
+                                : 'bg-gradient-to-r text-slate-900 hover:opacity-90'
+                            }`}
+                        >
+                            {isPlaying ? "Pause Simulation" : "Start Simulation"}
+                        </button>
+                        
+                        <button 
+                            onClick={() => { setIsPlaying(false); initialize(); }} 
+                            className="btn px-6 py-2.5 rounded-full font-medium text-slate-400 hover:text-white hover:bg-slate-700 border border-transparent transition-all"
+                        >
+                            Reset
+                        </button>
+                    </div>
+
+                    {/* Sliders */}
+                    <div className="space-y-6">
+                        <ControlRow label="Energy (k0)" val={params.k0} min={1} max={15} step={0.5} 
+                            onChange={v => setParams(p => ({...p, k0: parseFloat(v)}))} />
+                        
+                        <ControlRow label="Barrier Position" val={params.barrierPos} min={-5} max={10} step={0.5} 
+                            onChange={v => setParams(p => ({...p, barrierPos: parseFloat(v)}))} />
+                    </div>
+
+                    <div className="space-y-6">
+                        <ControlRow label="Barrier Height" val={params.barrierHeight} min={0} max={100} step={5} 
+                            onChange={v => setParams(p => ({...p, barrierHeight: parseFloat(v)}))} />
+
+                        <ControlRow label="Barrier Width" val={params.barrierWidth} min={0.5} max={5} step={0.1} 
+                            onChange={v => setParams(p => ({...p, barrierWidth: parseFloat(v)}))} />
+                    </div>
+                </div>
             </div>
         </div>
     );
 };
 
+
 const ControlRow = ({ label, val, min, max, step, onChange }) => (
-    <div style={{ marginBottom: '15px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
-            <span>{label}</span>
-            <span style={{ color: '#22d3ee' }}>{val}</span>
+    <div className="group">
+        <div className="flex justify-between items-center mb-2 text-sm font-medium">
+            <span className="text-slate-400 group-hover:text-cyan-300 transition-colors">{label}</span>
+            <span className="font-mono text-cyan-400 text-xs bg-cyan-900/20 px-2 py-0.5 rounded border border-cyan-500/30">
+                {val}
+            </span>
         </div>
-        <input type="range" min={min} max={max} step={step} value={val} onChange={e => onChange(e.target.value)} />
+        <input 
+            type="range" 
+            className="range-slider" // Uses your specific CSS class
+            min={min} 
+            max={max} 
+            step={step} 
+            value={val} 
+            onChange={e => onChange(e.target.value)} 
+        />
     </div>
 );
+   
 
 /* ================= RENDER TO DOM ================= */
 const rootElement = document.getElementById('root');
